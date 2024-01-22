@@ -1,8 +1,12 @@
 // import axios from 'axios';
 
-import { KeyValuePair, ModelParams } from '../../types/common';
+import { ModelParams } from '../../types/common';
 import { ModelPluginInterface } from '../../interfaces';
 import { buildErrorMessage } from '../../util/helpers';
+import { ERRORS } from '../../util/errors';
+
+const { InputValidationError, UnsupportedValueError } = ERRORS;
+
 
 export class CarbonAwareModel implements ModelPluginInterface {
   name: string | undefined;
@@ -16,7 +20,9 @@ export class CarbonAwareModel implements ModelPluginInterface {
     this.authParams = authParams;
   }
 
-  async configure(staticParams: object): Promise<ModelPluginInterface> {
+  async configure(staticParams: object | undefined = undefined): Promise<CarbonAwareModel> {
+    this.validateInputs(staticParams);
+
     // Pring staticParams to console
     console.log('#configure()');
     console.log(staticParams);
@@ -29,7 +35,7 @@ export class CarbonAwareModel implements ModelPluginInterface {
     return this;
   }
 
-  async execute(inputs: ModelParams[]): Promise<any[]> {
+  async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
     console.log('#execute()');
     console.log(inputs);
 
@@ -40,6 +46,35 @@ export class CarbonAwareModel implements ModelPluginInterface {
       throw new Error('inputs must be an array');
     }
 
-    return inputs.map((input: KeyValuePair) => input);
+    return [];
+    // return inputs.map((input: KeyValuePair) => input);
+  }
+
+  private validateInputs(staticParams: object | undefined = undefined): void {
+    if(staticParams === undefined) {
+      throw new InputValidationError(
+        this.errorBuilder({ message: 'Input data is missing' })
+      );
+    }
+
+    // Check if required preferred-locations provided
+    if(!('preferred-locations' in staticParams)) {
+      throw new UnsupportedValueError(
+        this.errorBuilder({
+          message: 'Preferred locations are not provided',
+          scope: 'configure',
+        })
+      );
+    }
+
+    // Check if required preferred-times provided
+    if(!('preferred-times' in staticParams)) {
+      throw new UnsupportedValueError(
+        this.errorBuilder({
+          message: 'Preferred times are not provided',
+          scope: 'configure',
+        })
+      );
+    }
   }
 }
